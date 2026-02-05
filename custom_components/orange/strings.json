@@ -1,0 +1,22 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Orange Romania",
+        "description": "Introdu credențialele Orange.ro",
+        "data": {
+          "username": "Nume utilizator (număr telefon sau email)",
+          "password": "Parolă"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Nu s-a putut conecta la Orange.ro",
+      "invalid_auth": "Autentificare eșuată. Verifică credențialele.",
+      "unknown": "Eroare necunoscută"
+    },
+    "abort": {
+      "already_configured": "Cont Orange deja configurat"
+    }
+  }
+}

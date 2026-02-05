@@ -1,0 +1,11 @@
+{
+  "domain": "orange",
+  "name": "Orange Romania",
+  "codeowners": ["@emanuelbesliu"],
+  "config_flow": true,
+  "documentation": "https://github.com/emanuelbesliu/homeassistant-orange",
+  "integration_type": "hub",
+  "iot_class": "cloud_polling",
+  "requirements": ["aiohttp>=3.8.0"],
+  "version": "0.1.0"
+}
