@@ -108,7 +108,12 @@ custom_components/orange/
 | `sensor.orange_profile_count` | Number of customer profiles | profile_names, profile_ids |
 | `sensor.orange_subscriber_count` | Number of subscriptions | phone_numbers, subscriber_ids |
 | `sensor.orange_loyalty_points` | Total loyalty points | Per-profile points breakdown |
-| `sensor.orange_total_unpaid_bills` | Total unpaid bills amount (RON) | total_count, per-profile amounts and due dates |
+| `sensor.orange_total_unpaid_bills` | Account balance (RON) - positive = debt, negative = credit | total_count, per-profile amounts and due dates |
+
+**Note:** The `sensor.orange_total_unpaid_bills` sensor displays:
+- **Positive values** (e.g., `129.41`) when you have outstanding bills to pay
+- **Negative values** (e.g., `-129.00`) when you have credit from advance payment
+- **Zero** when your account is settled
 
 ### Per-Profile Sensors
 
@@ -117,7 +122,7 @@ For each customer profile (e.g., "John Doe"):
 | Entity ID | State | Attributes |
 |-----------|-------|------------|
 | `sensor.orange_profile_100000001` | Customer type (PRIVATE) | name, ocn, status, next_invoice_date |
-| `sensor.orange_profile_100000001_unpaid_bills` | Unpaid amount (RON) | services_amount, installments_amount, due_date, profile_name |
+| `sensor.orange_profile_100000001_unpaid_bills` | Account balance (RON) - positive = debt, negative = credit | services_amount, installments_amount, due_date, profile_name |
 
 ### Per-Subscriber Sensors
 

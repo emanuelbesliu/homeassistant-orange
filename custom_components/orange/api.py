@@ -277,20 +277,25 @@ class OrangeAPI:
                 return {}
 
     async def _fetch_unpaid_bills(self, headers: dict[str, str], profiles: list[dict[str, Any]]) -> dict[str, Any]:
-        """Fetch unpaid bills information for all profiles.
+        """Fetch account balance information for all profiles.
+        
+        Returns balance amount which can be:
+        - Positive: Outstanding bills to pay
+        - Negative: Credit from advance payment
+        - Zero: Account is settled
         
         Args:
             headers: HTTP headers for requests
             profiles: List of profile dictionaries
             
         Returns:
-            Dictionary with unpaid bills data:
+            Dictionary with balance data:
             {
-                "total_amount": 129.41,
+                "total_amount": 129.41,  # Can be negative for credit
                 "total_count": 2,
                 "by_profile": {
                     "100000001": {
-                        "amount": 129.41,
+                        "amount": 129.41,  # Can be negative for credit
                         "services": 129.41,
                         "installments": 0.0,
                         "due_date": "2026-02-15",
@@ -323,11 +328,11 @@ class OrangeAPI:
                         if not invoice_data:
                             continue
                         
-                        # Extract unpaid bill information
+                        # Extract account balance (can be positive, negative, or zero)
                         total_balance = invoice_data.get("totalBalanceAmount", 0.0) or 0.0
                         
-                        # Only include if there's an unpaid balance
-                        if total_balance > 0:
+                        # Include all balances (positive = debt, negative = credit, zero = settled)
+                        if total_balance != 0:
                             # Convert timestamp to date string if due_date exists
                             due_date_ts = invoice_data.get("dueDate")
                             due_date_str = None

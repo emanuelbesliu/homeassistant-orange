@@ -203,7 +203,12 @@ class OrangeLoyaltyPointsSensor(OrangeBaseSensor):
 
 
 class OrangeTotalUnpaidBillsSensor(OrangeBaseSensor):
-    """Sensor for total unpaid bills across all profiles."""
+    """Sensor for account balance across all profiles.
+    
+    Positive values indicate outstanding bills (debt).
+    Negative values indicate credit from advance payment.
+    Zero indicates account is settled.
+    """
 
     def __init__(
         self,
@@ -218,7 +223,13 @@ class OrangeTotalUnpaidBillsSensor(OrangeBaseSensor):
 
     @property
     def native_value(self) -> float | None:
-        """Return the state of the sensor."""
+        """Return the state of the sensor.
+        
+        Returns:
+            Positive: Outstanding bills to pay
+            Negative: Credit from advance payment
+            Zero: Account is settled
+        """
         if self.coordinator.data and "unpaid_bills" in self.coordinator.data:
             return self.coordinator.data["unpaid_bills"].get("total_amount", 0.0)
         return 0.0
@@ -241,7 +252,12 @@ class OrangeTotalUnpaidBillsSensor(OrangeBaseSensor):
 
 
 class OrangeProfileUnpaidBillsSensor(OrangeBaseSensor):
-    """Sensor for unpaid bills for a specific profile."""
+    """Sensor for account balance for a specific profile.
+    
+    Positive values indicate outstanding bills (debt).
+    Negative values indicate credit from advance payment.
+    Zero indicates account is settled.
+    """
 
     def __init__(
         self,
@@ -264,7 +280,13 @@ class OrangeProfileUnpaidBillsSensor(OrangeBaseSensor):
 
     @property
     def native_value(self) -> float | None:
-        """Return the state of the sensor."""
+        """Return the state of the sensor.
+        
+        Returns:
+            Positive: Outstanding bills to pay
+            Negative: Credit from advance payment
+            Zero: Account is settled
+        """
         if self.coordinator.data and "unpaid_bills" in self.coordinator.data:
             by_profile = self.coordinator.data["unpaid_bills"].get("by_profile", {})
             profile_data = by_profile.get(str(self._profile_id), {})
