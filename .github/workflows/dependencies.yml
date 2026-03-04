@@ -40,9 +40,9 @@ jobs:
           echo "requirements.txt:"
           cat requirements.txt | grep -v '^#' | grep -v '^$'
           
-          # Check if requests is in requirements.txt
-          if ! grep -q "requests" requirements.txt; then
-            echo "❌ requests not found in requirements.txt"
+          # Check if aiohttp is in requirements.txt
+          if ! grep -q "aiohttp" requirements.txt; then
+            echo "❌ aiohttp not found in requirements.txt"
             exit 1
           fi
           
@@ -50,7 +50,7 @@ jobs:
 
       - name: Test import
         run: |
-          python -c "import requests; print(f'requests version: {requests.__version__}')"
+          python -c "import aiohttp; print(f'aiohttp version: {aiohttp.__version__}')"
           echo "✓ All dependencies can be imported"
 
       - name: Check for security vulnerabilities
