@@ -40,3 +40,14 @@ secrets.yaml
 *.pem
 *.key
 credentials.json
+
+# Release artifacts (should only exist in GitHub Releases)
+*.zip
+RELEASE_*.md
+GITHUB_PUSH_SUMMARY.md
+
+# Verbose documentation (keep only README.md, CHANGELOG.md, info.md if exists)
+AUTO_VERSIONING.md
+DEPENDABOT.md
+WORKFLOWS.md
+SETUP.md
