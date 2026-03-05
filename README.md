@@ -1,10 +1,12 @@
 # Orange Romania - Home Assistant Integration
 
+[![HACS](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/custom-components/hacs)
+[![GitHub Release](https://img.shields.io/github/v/release/emanuelbesliu/homeassistant-orange)](https://github.com/emanuelbesliu/homeassistant-orange/releases/latest)
+[![License](https://img.shields.io/github/license/emanuelbesliu/homeassistant-orange)](LICENSE)
+
 **Custom Home Assistant integration for [orange.ro](https://www.orange.ro)**
 
 Monitor your Orange subscriptions, account balance, loyalty points, and unpaid bills directly from Home Assistant.
-
-> **Status:** ✅ **v0.1.0 - Ready for Testing!**
 
 ---
 
