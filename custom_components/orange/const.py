@@ -33,5 +33,5 @@ API_SUBSCRIBER_INFO = f"{API_BASE}/subscribers/{{subscriber_id}}"
 API_ACTIVE_OPTIONS = f"{API_BASE}/activeOptions/{{subscriber_id}}"
 API_MSISDN_EXTRA_INFO = f"{API_BASE}/msisdnExtraInfo/{{msisdn}}"
 
-# Update interval
-DEFAULT_SCAN_INTERVAL = 3600  # 1 hour in seconds
+# Update interval - 4 times per day (every 6 hours)
+DEFAULT_SCAN_INTERVAL = 21600  # 6 hours in seconds

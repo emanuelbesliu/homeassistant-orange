@@ -8,6 +8,13 @@
           "username": "Username (phone number or email)",
           "password": "Password"
         }
+      },
+      "reauth_confirm": {
+        "title": "Reauthenticate Orange Romania",
+        "description": "Authentication for account {username} failed. Please enter the correct password.",
+        "data": {
+          "password": "New password"
+        }
       }
     },
     "error": {
@@ -16,7 +23,8 @@
       "unknown": "Unknown error"
     },
     "abort": {
-      "already_configured": "Orange account already configured"
+      "already_configured": "Orange account already configured",
+      "reauth_successful": "Reauthentication successful"
     }
   }
 }
