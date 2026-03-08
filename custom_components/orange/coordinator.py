@@ -98,6 +98,7 @@ class OrangeDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 )
                 # Clear auth state so a future reauth starts fresh
                 self.api._authenticated = False
+                self.api._clear_cookies()
                 raise ConfigEntryAuthFailed(
                     "Authentication failed. Please reconfigure the integration "
                     "with valid credentials."

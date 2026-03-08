@@ -36,109 +36,148 @@ class AuthenticationError(Exception):
 
 
 class OrangeAPI:
-    """API client for Orange Romania platform."""
+    """API client for Orange Romania platform.
 
-    def __init__(self, session: ClientSession, username: str, password: str) -> None:
+    Uses its own dedicated ``aiohttp.ClientSession`` with a private
+    ``CookieJar`` so that stale SSO cookies never leak across
+    authentication cycles (the root cause of 405 errors on
+    re-authentication when using HA's shared session).
+    """
+
+    def __init__(self, username: str, password: str) -> None:
         """Initialize the API client.
-        
+
+        Call ``async_init()`` after construction to create the HTTP session,
+        and ``async_close()`` when the integration is unloaded.
+
         Args:
-            session: aiohttp ClientSession
             username: Orange.ro account username (phone number or email)
             password: Orange.ro account password
         """
-        self._session = session
         self._username = username
         self._password = password
         self._authenticated = False
         self._sso_id: int | None = None
         self._user_data: dict[str, Any] = {}
+        self._session: ClientSession | None = None
+
+    @property
+    def session(self) -> ClientSession:
+        """Return the HTTP session, raising if not initialised."""
+        assert self._session is not None, "Call async_init() before using the API"
+        return self._session
+
+    async def async_init(self) -> None:
+        """Create the dedicated HTTP session with its own cookie jar."""
+        self._session = ClientSession(
+            cookie_jar=aiohttp.CookieJar(unsafe=True),
+        )
+
+    async def async_close(self) -> None:
+        """Close the dedicated HTTP session."""
+        if self._session and not self._session.closed:
+            await self._session.close()
+
+    def _clear_cookies(self) -> None:
+        """Clear all cookies from the session jar."""
+        self.session.cookie_jar.clear()
 
     async def authenticate(self) -> bool:
         """Authenticate with the Orange Romania platform using OAuth flow.
-        
+
+        The cookie jar is cleared before every attempt so that stale SSO
+        cookies from a previous login cycle cannot interfere (which causes
+        the server to return 405 Method Not Allowed).
+
         The authentication flow:
-        1. GET /myaccount/ to get redirected to login page with 'ak' parameter
-        2. POST credentials to the login URL
-        3. Follow OAuth redirects automatically
-        4. Session cookies are set automatically by aiohttp
-        
+        1. Clear the cookie jar for a fresh start
+        2. GET /myaccount/ to get redirected to login page with 'ak' parameter
+        3. POST credentials to the login URL
+        4. Follow OAuth redirects automatically
+        5. Session cookies are set automatically by aiohttp's cookie jar
+
         Returns:
             True if authentication successful, False otherwise.
-            
+
         Raises:
             Exception: If network error occurs.
         """
         try:
             _LOGGER.debug("Starting Orange.ro authentication")
-            
+
+            # Clear stale cookies so we start with a clean jar every time
+            self._clear_cookies()
+            self._authenticated = False
+
             headers = {
                 "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
                 "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
                 "Accept-Language": "ro-RO,ro;q=0.9,en;q=0.8",
             }
-            
+
             # Step 1: GET myaccount page to get redirected to login with 'ak' parameter
-            async with self._session.get(
+            async with self.session.get(
                 LOGIN_PAGE_URL,
                 headers=headers,
                 allow_redirects=True,
             ) as response:
                 if response.status != 200:
-                    _LOGGER.error(f"Failed to load login page: {response.status}")
+                    _LOGGER.error("Failed to load login page: %s", response.status)
                     return False
-                
+
                 login_url = str(response.url)
-                _LOGGER.debug(f"Login URL: {login_url}")
-            
+                _LOGGER.debug("Login URL: %s", login_url)
+
             # Step 2: POST credentials to login URL
             login_data = {
                 "username": self._username,
                 "password": self._password,
             }
-            
+
             headers_post = {
                 **headers,
                 "Content-Type": "application/x-www-form-urlencoded",
                 "Origin": BASE_URL,
                 "Referer": login_url,
             }
-            
-            async with self._session.post(
+
+            async with self.session.post(
                 login_url,
                 data=login_data,
                 headers=headers_post,
                 allow_redirects=True,  # Follow OAuth redirects
             ) as response:
                 if response.status != 200:
-                    _LOGGER.error(f"Login failed with status: {response.status}")
+                    _LOGGER.error("Login failed with status: %s", response.status)
                     return False
-                
+
                 final_url = str(response.url)
-                _LOGGER.debug(f"Final URL after login: {final_url}")
-            
+                _LOGGER.debug("Final URL after login: %s", final_url)
+
             # Step 3: Verify authentication by checking userData
             user_data = await self._fetch_user_data()
-            
+
             if user_data and user_data.get("data", {}).get("isUserLogged"):
                 self._authenticated = True
                 current_user = user_data.get("data", {}).get("currentUser", {})
                 self._sso_id = current_user.get("ssoId")
                 self._user_data = current_user
-                
+
                 _LOGGER.info(
-                    f"Successfully authenticated as {current_user.get('username')} "
-                    f"(SSO ID: {self._sso_id})"
+                    "Successfully authenticated as %s (SSO ID: %s)",
+                    current_user.get("username"),
+                    self._sso_id,
                 )
                 return True
             else:
                 _LOGGER.error("Login appeared successful but user is not logged in")
                 return False
-                
+
         except aiohttp.ClientError as err:
-            _LOGGER.error(f"Network error during authentication: {err}")
+            _LOGGER.error("Network error during authentication: %s", err)
             raise
         except Exception as err:
-            _LOGGER.error(f"Unexpected authentication error: {err}")
+            _LOGGER.error("Unexpected authentication error: %s", err)
             raise
 
     async def _fetch_user_data(self) -> dict[str, Any]:
@@ -153,7 +192,7 @@ class OrangeAPI:
             "Referer": f"{BASE_URL}/myaccount/",
         }
         
-        async with self._session.get(API_USER_DATA, headers=headers) as response:
+        async with self.session.get(API_USER_DATA, headers=headers) as response:
             if response.status == 200:
                 return await response.json()
             else:
@@ -257,7 +296,7 @@ class OrangeAPI:
 
     async def _fetch_profiles(self, headers: dict[str, str]) -> dict[str, Any]:
         """Fetch user profiles."""
-        async with self._session.get(API_PROFILES, headers=headers) as response:
+        async with self.session.get(API_PROFILES, headers=headers) as response:
             if response.status == 200:
                 return await response.json()
             if response.status in (401, 403):
@@ -268,7 +307,7 @@ class OrangeAPI:
 
     async def _fetch_subscribers(self, headers: dict[str, str]) -> list[dict[str, Any]]:
         """Fetch subscribers list."""
-        async with self._session.get(API_SUBSCRIBERS, headers=headers) as response:
+        async with self.session.get(API_SUBSCRIBERS, headers=headers) as response:
             if response.status == 200:
                 return await response.json()
             if response.status in (401, 403):
@@ -279,7 +318,7 @@ class OrangeAPI:
 
     async def _fetch_subscriptions_summary(self, headers: dict[str, str]) -> dict[str, Any]:
         """Fetch subscriptions summary."""
-        async with self._session.get(API_SUBSCRIPTIONS_SUMMARY, headers=headers) as response:
+        async with self.session.get(API_SUBSCRIPTIONS_SUMMARY, headers=headers) as response:
             if response.status == 200:
                 return await response.json()
             if response.status in (401, 403):
@@ -331,7 +370,7 @@ class OrangeAPI:
             try:
                 # Fetch invoice info for this profile
                 url = API_PROFILE_INVOICE_INFO.format(profile_id=profile_id)
-                async with self._session.get(url, headers=headers) as response:
+                async with self.session.get(url, headers=headers) as response:
                     if response.status in (401, 403):
                         raise AuthenticationError(
                             f"Authentication expired fetching invoice for profile {profile_id}: {response.status}"
@@ -397,7 +436,7 @@ class OrangeAPI:
         
         url = API_PROFILE_INVOICE_INFO.format(profile_id=profile_id)
         
-        async with self._session.get(url, headers=headers) as response:
+        async with self.session.get(url, headers=headers) as response:
             if response.status == 200:
                 return await response.json()
             else:
@@ -422,7 +461,7 @@ class OrangeAPI:
         
         url = API_PROFILE_TRANSACTIONS.format(profile_id=profile_id)
         
-        async with self._session.get(url, headers=headers) as response:
+        async with self.session.get(url, headers=headers) as response:
             if response.status == 200:
                 return await response.json()
             else:

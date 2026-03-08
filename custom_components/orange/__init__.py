@@ -16,7 +16,6 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME, Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .api import OrangeAPI
 from .const import DOMAIN
@@ -29,23 +28,23 @@ PLATFORMS: list[Platform] = [Platform.SENSOR]
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Orange Romania from a config entry."""
-    session = async_get_clientsession(hass)
-
     api = OrangeAPI(
-        session,
         entry.data[CONF_USERNAME],
         entry.data[CONF_PASSWORD],
     )
+    await api.async_init()
 
     try:
         authenticated = await api.authenticate()
         if not authenticated:
+            await api.async_close()
             raise ConfigEntryAuthFailed(
                 "Authentication failed. Please reconfigure with valid credentials."
             )
     except ConfigEntryAuthFailed:
         raise
     except Exception as err:
+        await api.async_close()
         _LOGGER.error("Failed to authenticate with Orange Romania: %s", err)
         raise ConfigEntryNotReady from err
 
@@ -67,6 +66,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
     if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
-        hass.data[DOMAIN].pop(entry.entry_id)
+        entry_data = hass.data[DOMAIN].pop(entry.entry_id)
+        api: OrangeAPI = entry_data["api"]
+        await api.async_close()
 
     return unload_ok

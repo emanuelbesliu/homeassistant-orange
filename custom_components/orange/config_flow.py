@@ -20,7 +20,6 @@ from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResult
 from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .api import OrangeAPI
 from .const import DOMAIN
@@ -40,8 +39,8 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
 
     Data has the keys from STEP_USER_DATA_SCHEMA with values provided by the user.
     """
-    session = async_get_clientsession(hass)
-    api = OrangeAPI(session, data[CONF_USERNAME], data[CONF_PASSWORD])
+    api = OrangeAPI(data[CONF_USERNAME], data[CONF_PASSWORD])
+    await api.async_init()
 
     try:
         result = await api.authenticate()
@@ -52,6 +51,8 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
     except Exception as err:
         _LOGGER.error("Unexpected error during validation: %s", err)
         raise CannotConnect from err
+    finally:
+        await api.async_close()
 
     # Return info that you want to store in the config entry.
     return {"title": f"Orange Romania - {data[CONF_USERNAME]}"}
