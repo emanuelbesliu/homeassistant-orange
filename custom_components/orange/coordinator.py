@@ -28,7 +28,7 @@ from homeassistant.helpers.update_coordinator import (
     UpdateFailed,
 )
 
-from .api import OrangeAPI
+from .api import OrangeAPI, AuthenticationError
 from .const import DOMAIN, DEFAULT_SCAN_INTERVAL
 
 _LOGGER = logging.getLogger(__name__)
@@ -158,11 +158,16 @@ class OrangeDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         """Determine whether an exception indicates an authentication problem.
 
         Checks for:
+        - Our own AuthenticationError from the API client
         - HTTP 401 / 403 status codes in the message
         - Explicit "not logged in" / "authentication" phrases
         - aiohttp ClientResponseError with matching status
         """
         import aiohttp
+
+        # Our API client raises AuthenticationError on 401/403
+        if isinstance(err, AuthenticationError):
+            return True
 
         # aiohttp gives us a typed status code
         if isinstance(err, aiohttp.ClientResponseError):

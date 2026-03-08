@@ -31,6 +31,10 @@ from .const import (
 _LOGGER = logging.getLogger(__name__)
 
 
+class AuthenticationError(Exception):
+    """Raised when the API returns a 401/403 or session has expired."""
+
+
 class OrangeAPI:
     """API client for Orange Romania platform."""
 
@@ -197,8 +201,10 @@ class OrangeAPI:
         Raises:
             Exception: If API request fails.
         """
-        if not self._authenticated:
-            await self.authenticate()
+        # Always re-authenticate before fetching data.
+        # Cookies expire between 6-hour refresh cycles, so a fresh login
+        # on every call is the only reliable approach.
+        await self.authenticate()
         
         try:
             headers = {
@@ -254,27 +260,33 @@ class OrangeAPI:
         async with self._session.get(API_PROFILES, headers=headers) as response:
             if response.status == 200:
                 return await response.json()
-            else:
-                _LOGGER.warning(f"Failed to fetch profiles: {response.status}")
-                return {}
+            if response.status in (401, 403):
+                raise AuthenticationError(
+                    f"Authentication expired fetching profiles: {response.status}"
+                )
+            raise Exception(f"Failed to fetch profiles: {response.status}")
 
     async def _fetch_subscribers(self, headers: dict[str, str]) -> list[dict[str, Any]]:
         """Fetch subscribers list."""
         async with self._session.get(API_SUBSCRIBERS, headers=headers) as response:
             if response.status == 200:
                 return await response.json()
-            else:
-                _LOGGER.warning(f"Failed to fetch subscribers: {response.status}")
-                return []
+            if response.status in (401, 403):
+                raise AuthenticationError(
+                    f"Authentication expired fetching subscribers: {response.status}"
+                )
+            raise Exception(f"Failed to fetch subscribers: {response.status}")
 
     async def _fetch_subscriptions_summary(self, headers: dict[str, str]) -> dict[str, Any]:
         """Fetch subscriptions summary."""
         async with self._session.get(API_SUBSCRIPTIONS_SUMMARY, headers=headers) as response:
             if response.status == 200:
                 return await response.json()
-            else:
-                _LOGGER.warning(f"Failed to fetch subscriptions summary: {response.status}")
-                return {}
+            if response.status in (401, 403):
+                raise AuthenticationError(
+                    f"Authentication expired fetching subscriptions: {response.status}"
+                )
+            raise Exception(f"Failed to fetch subscriptions summary: {response.status}")
 
     async def _fetch_unpaid_bills(self, headers: dict[str, str], profiles: list[dict[str, Any]]) -> dict[str, Any]:
         """Fetch account balance information for all profiles.
@@ -320,6 +332,10 @@ class OrangeAPI:
                 # Fetch invoice info for this profile
                 url = API_PROFILE_INVOICE_INFO.format(profile_id=profile_id)
                 async with self._session.get(url, headers=headers) as response:
+                    if response.status in (401, 403):
+                        raise AuthenticationError(
+                            f"Authentication expired fetching invoice for profile {profile_id}: {response.status}"
+                        )
                     if response.status == 200:
                         invoice_response = await response.json()
                         invoice_data = invoice_response.get("data")
@@ -354,6 +370,8 @@ class OrangeAPI:
                     else:
                         _LOGGER.warning(f"Failed to fetch invoice for profile {profile_id}: {response.status}")
                         
+            except AuthenticationError:
+                raise
             except Exception as err:
                 _LOGGER.warning(f"Error fetching invoice for profile {profile_id}: {err}")
                 continue
@@ -369,8 +387,7 @@ class OrangeAPI:
         Returns:
             Invoice data dictionary.
         """
-        if not self._authenticated:
-            await self.authenticate()
+        await self.authenticate()
         
         headers = {
             "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
@@ -395,8 +412,7 @@ class OrangeAPI:
         Returns:
             Transactions data dictionary.
         """
-        if not self._authenticated:
-            await self.authenticate()
+        await self.authenticate()
         
         headers = {
             "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
