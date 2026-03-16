@@ -181,6 +181,12 @@ The Orange name and logo are trademarks of Orange S.A. This project is not endor
 
 ---
 
+## ☕ Support the Developer
+
+If you find this project useful, consider buying me a coffee!
+
+[!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://buymeacoffee.com/emanuelbesliu)
+
+---
+
 **Developed by Emanuel Besliu (@emanuelbesliu)**
-# Test dependency update
-# Test v2
